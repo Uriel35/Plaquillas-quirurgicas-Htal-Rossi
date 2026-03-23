@@ -1,0 +1,19 @@
+__pycache__/
+*.pyc
+
+# PyInstaller
+build/
+dist/
+*.spec
+
+# Datos
+data/
+*.xlsx
+*.csv
+*.pdf
+
+# credenciales sensibles
+credentials/email_token.json
+
+# opcional
+.env
