@@ -6,12 +6,6 @@ build/
 dist/
 *.spec
 
-# Datos
-data/
-*.xlsx
-*.csv
-*.pdf
-
 # credenciales sensibles
 credentials/email_token.json
 
