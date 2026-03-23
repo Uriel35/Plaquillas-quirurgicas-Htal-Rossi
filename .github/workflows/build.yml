@@ -31,6 +31,8 @@ jobs:
         pyinstaller --onefile `
           --add-data "credentials/email_credentials.json;credentials" `
           --collect-all numpy `
+          --collect-binaries numpy `
+          --collect-data numpy `
           --collect-all pandas `
           --collect-all openpyxl `
           --collect-all reportlab `
