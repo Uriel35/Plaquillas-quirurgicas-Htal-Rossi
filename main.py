@@ -7,7 +7,6 @@ try:
     import locale
     from datetime import datetime
 
-    import numpy as np
     import pandas as pd
     from reportlab.platypus import SimpleDocTemplate, Table, Paragraph, Spacer
     from reportlab.platypus import TableStyle
