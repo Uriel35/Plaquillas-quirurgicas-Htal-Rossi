@@ -28,20 +28,7 @@ jobs:
 
     - name: Build EXE
       run: |
-        pyinstaller --onefile `
-          --add-data "credentials/email_credentials.json;credentials" `
-          --collect-all numpy `
-          --collect-binaries numpy `
-          --collect-data numpy `
-          --collect-all pandas `
-          --collect-all openpyxl `
-          --collect-all reportlab `
-          --collect-all googleapiclient `
-          --collect-all google `
-          --collect-all google_auth_oauthlib `
-          --hidden-import pkg_resources `
-          --hidden-import queue `
-          main.py
+        pyinstaller main.spec
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
