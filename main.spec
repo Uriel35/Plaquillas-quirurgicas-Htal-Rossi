@@ -34,6 +34,7 @@ exe = EXE(
     pyz,
     a.scripts,
     a.binaries,
+    a.zipfiles,
     a.datas,
     [],
     name='main',
@@ -41,4 +42,14 @@ exe = EXE(
     strip=False,
     upx=True,
     console=True,
+)
+
+coll = COLLECT(
+    exe,
+    a.binaries,
+    a.zipfiles,
+    a.datas,
+    strip=False,
+    upx=True,
+    name='main',
 )
