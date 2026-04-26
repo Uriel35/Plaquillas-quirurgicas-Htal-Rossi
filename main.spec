@@ -8,6 +8,7 @@ a = Analysis(
     binaries=[],
     datas=[
         ('credentials/email_credentials.json', 'credentials'),
+        ('data/htal_rossi_logo.png', 'data'),
     ],
     hiddenimports=[
         'numpy',

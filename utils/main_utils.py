@@ -3,6 +3,7 @@ import os
 import sys
 import subprocess
 import locale
+from pathlib import Path
 from datetime import datetime
 
 def resource_path(relative_path):
@@ -12,6 +13,33 @@ def resource_path(relative_path):
         base_path = os.path.abspath(".")
 
     return os.path.join(base_path, relative_path)
+
+def get_app_dir() -> Path:
+    """
+    Devuelve la carpeta "base" de la app:
+    - En PyInstaller: carpeta donde vive el .exe
+    - En modo script: raíz del proyecto (un nivel arriba de utils/)
+    """
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent
+    return Path(__file__).resolve().parents[1]
+
+
+def get_work_dir(app_name: str = "Quirofano_oftalmologia_rossi") -> Path:
+    """
+    Carpeta escribible para generar PDFs/Excels y guardar tokens.
+    Preferimos la carpeta de la app (portable). Si no es escribible, caemos al HOME.
+    """
+    app_dir = get_app_dir()
+    try:
+        if os.access(app_dir, os.W_OK):
+            return app_dir
+    except Exception:
+        pass
+
+    fallback = Path.home() / app_name
+    fallback.mkdir(parents=True, exist_ok=True)
+    return fallback
 
 def calcular_col_widths(df, page_width, min_width=40, max_width=None):
     """

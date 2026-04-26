@@ -9,5 +9,9 @@ dist/
 # credenciales sensibles
 credentials/email_token.json
 
+# Archivos generados por la app
+plantilla_quirofano.pdf
+data/excel.xlsx
+
 # opcional
 .env

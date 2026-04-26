@@ -1,6 +1,7 @@
 import os
 import base64
 import sys
+from pathlib import Path
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -21,11 +22,32 @@ def resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 
+def get_work_dir(app_name: str = "Quirofano_oftalmologia_rossi") -> Path:
+    """
+    Carpeta escribible para tokens/archivos generados.
+    En ejecutable portable usamos la carpeta del .exe; si no se puede, HOME.
+    """
+    if getattr(sys, "frozen", False):
+        app_dir = Path(sys.executable).resolve().parent
+    else:
+        app_dir = Path(os.path.abspath("."))
+
+    try:
+        if os.access(app_dir, os.W_OK):
+            return app_dir
+    except Exception:
+        pass
+
+    fallback = Path.home() / app_name
+    fallback.mkdir(parents=True, exist_ok=True)
+    return fallback
+
+
 def user_data_path(relative_path):
     """Para archivos que se crean/modifican (token)"""
-    base_path = os.path.join(os.getcwd(), "credentials")
-    os.makedirs(base_path, exist_ok=True)
-    return os.path.join(base_path, os.path.basename(relative_path))
+    base_path = get_work_dir() / "credentials"
+    base_path.mkdir(parents=True, exist_ok=True)
+    return str(base_path / os.path.basename(relative_path))
 
 
 def autenticar():
