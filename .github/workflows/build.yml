@@ -26,8 +26,12 @@ jobs:
 
     - name: Install dependencies
       run: |
-        pip install -r requirements-app.txt
-        pip install pyinstaller pyinstaller-hooks-contrib
+        python -m pip --version
+        where python
+        where pip
+        python -m pip install -r requirements-app.txt
+        python -m pip install pyinstaller pyinstaller-hooks-contrib
+        python -m pip show pandas
 
     - name: Verify deps installed
       run: |
