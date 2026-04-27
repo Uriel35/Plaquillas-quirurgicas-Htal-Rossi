@@ -45,16 +45,50 @@ def _check_bundle_layout_or_explain() -> None:
     if not getattr(sys, "frozen", False):
         return
 
-    bundle_dir = _pyinstaller_bundle_dir()
-    if not bundle_dir or not os.path.isdir(bundle_dir):
-        return
+    # En el modo "onedir" moderno, PyInstaller pone los módulos y recursos en `_internal/`.
+    # En algunos casos, paquetes Python pueden quedar dentro de `base_library.zip`/`PYZ` y no como carpetas
+    # físicas (por eso no chequeamos `_internal/pandas/`).
+    exe_dir = os.path.dirname(sys.executable)
+    internal_dir = os.path.join(exe_dir, "_internal")
+    if os.path.isdir(internal_dir):
+        base_zip = os.path.join(internal_dir, "base_library.zip")
+        if os.path.isfile(base_zip):
+            return
 
-    pandas_dir = os.path.join(bundle_dir, "pandas")
-    if os.path.isdir(pandas_dir):
-        return
+        _fatal_bundle_error(
+            "El bundle del EXE parece incompleto: falta `_internal/base_library.zip`.\n"
+            "\n"
+            "Esto casi siempre pasa por una de estas razones:\n"
+            "1) Ejecutaste el EXE directamente desde un ZIP (sin 'Extraer todo').\n"
+            "2) Moviste/copiaste solo `main.exe` y no la carpeta `_internal`.\n"
+            "3) Antivirus/Defender aisló/borró archivos dentro de `_internal`.\n"
+            "\n"
+            "Qué hacer:\n"
+            "- Extraé el ZIP completo a una carpeta (ej: Escritorio) y ejecutá `main.exe` desde ahí.\n"
+            "- Verificá que `_internal` exista al lado de `main.exe`.\n"
+            "- Si sigue, volvé a descargar el artefacto más nuevo desde GitHub Actions y reintentalo.\n"
+        )
 
-    _fatal_bundle_error(
-        "No se encontró el paquete `pandas` dentro del bundle del EXE.\n"
+    # Onefile u otros layouts: no validamos acá (se detecta al importar).
+    return
+
+
+def _bundle_debug_info() -> str:
+    if not getattr(sys, "frozen", False):
+        return ""
+    exe_dir = os.path.dirname(sys.executable)
+    internal_dir = os.path.join(exe_dir, "_internal")
+    base_zip = os.path.join(internal_dir, "base_library.zip")
+    return (
+        f"sys.executable: {sys.executable}\n"
+        f"_internal exists: {os.path.isdir(internal_dir)}\n"
+        f"base_library.zip exists: {os.path.isfile(base_zip)}"
+    )
+
+
+def _missing_dep_error(dep_name: str, exc: Exception) -> None:
+    msg = (
+        f"No se pudo importar `{dep_name}`.\n"
         "\n"
         "Esto casi siempre pasa por una de estas razones:\n"
         "1) Ejecutaste el EXE directamente desde un ZIP (sin 'Extraer todo').\n"
@@ -63,9 +97,13 @@ def _check_bundle_layout_or_explain() -> None:
         "\n"
         "Qué hacer:\n"
         "- Extraé el ZIP completo a una carpeta (ej: Escritorio) y ejecutá `main.exe` desde ahí.\n"
-        "- Verificá que exista `_internal/pandas/` al lado de `main.exe`.\n"
+        "- Verificá que `_internal` exista al lado de `main.exe`.\n"
         "- Si sigue, volvé a descargar el artefacto más nuevo desde GitHub Actions y reintentalo.\n"
+        "\n"
+        f"Detalle técnico: {type(exc).__name__}: {exc}\n"
+        f"{_bundle_debug_info()}\n"
     )
+    _fatal_bundle_error(msg)
 
 
 def _run_self_test() -> None:
@@ -73,8 +111,6 @@ def _run_self_test() -> None:
     Diagnóstico rápido para CI y para usuarios:
     `main.exe --self-test`
     """
-    _check_bundle_layout_or_explain()
-
     try:
         import pandas as _pd  # noqa: F401
         import numpy as _np  # noqa: F401
@@ -84,7 +120,7 @@ def _run_self_test() -> None:
         import google_auth_oauthlib as _google_auth_oauthlib  # noqa: F401
         import google.auth as _google_auth  # noqa: F401
     except Exception as e:
-        _fatal_bundle_error(f"SELFTEST_FAIL: {type(e).__name__}: {e}")
+        _missing_dep_error("dependencias", e)
 
     print("SELFTEST_OK")
     raise SystemExit(0)
@@ -222,8 +258,6 @@ def main():
     if "--self-test" in sys.argv:
         _run_self_test()
 
-    _check_bundle_layout_or_explain()
-
     # Imports diferidos: permiten dar un error más útil cuando el bundle está incompleto.
     global pd
     global SimpleDocTemplate, Table, Paragraph, Spacer, TableStyle
@@ -235,15 +269,7 @@ def main():
     except ModuleNotFoundError as e:
         if getattr(sys, "frozen", False) and str(getattr(e, "name", "")).startswith("pandas"):
             _check_bundle_layout_or_explain()
-            _fatal_bundle_error(
-                "No se pudo importar `pandas`.\n"
-                "\n"
-                "Si descargaste un ZIP desde GitHub, asegurate de hacer 'Extraer todo' y de que `main.exe`\n"
-                "esté junto a la carpeta `_internal` (y dentro exista `_internal/pandas/`).\n"
-                "\n"
-                "Si eso está OK, es posible que un antivirus haya eliminado archivos del bundle. Probá volver\n"
-                "a extraer el ZIP en otra carpeta y/o agregar una exclusión.\n"
-            )
+            _missing_dep_error("pandas", e)
         raise
 
     from reportlab.platypus import SimpleDocTemplate, Table, Paragraph, Spacer
