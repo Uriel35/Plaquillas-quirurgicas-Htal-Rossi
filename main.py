@@ -79,10 +79,20 @@ def _bundle_debug_info() -> str:
     exe_dir = os.path.dirname(sys.executable)
     internal_dir = os.path.join(exe_dir, "_internal")
     base_zip = os.path.join(internal_dir, "base_library.zip")
+    pyz = os.path.join(internal_dir, "PYZ-00.pyz")
+    internal_sample = []
+    try:
+        if os.path.isdir(internal_dir):
+            internal_sample = sorted(os.listdir(internal_dir))[:30]
+    except Exception:
+        internal_sample = []
     return (
         f"sys.executable: {sys.executable}\n"
+        f"sys.path sample: {sys.path[:6]}\n"
         f"_internal exists: {os.path.isdir(internal_dir)}\n"
         f"base_library.zip exists: {os.path.isfile(base_zip)}"
+        f"\nPYZ-00.pyz exists: {os.path.isfile(pyz)}\n"
+        f"_internal sample: {internal_sample}"
     )
 
 

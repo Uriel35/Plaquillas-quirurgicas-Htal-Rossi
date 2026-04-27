@@ -29,9 +29,18 @@ jobs:
         pip install -r requirements-app.txt
         pip install pyinstaller pyinstaller-hooks-contrib
 
+    - name: Verify deps installed
+      run: |
+        python -c "import sys; print(sys.version)"
+        python -c "import pandas, numpy; print('pandas', pandas.__version__, pandas.__file__); print('numpy', numpy.__version__, numpy.__file__)"
+
     - name: Build EXE
       run: |
-        pyinstaller --clean --noconfirm main.spec
+        python -m PyInstaller --clean --noconfirm main.spec
+
+    - name: Verify pandas bundled
+      run: |
+        python -c "import os, zipfile; d='dist/main/_internal'; p=os.path.join(d,'PYZ-00.pyz'); print('internal dir exists:', os.path.isdir(d)); print('pandas dir exists:', os.path.isdir(os.path.join(d,'pandas'))); print('PYZ path:', p); print('PYZ exists:', os.path.isfile(p));\nif os.path.isfile(p):\n  z=zipfile.ZipFile(p); names=z.namelist();\n  print('pandas in PYZ:', any(n.startswith('pandas/') for n in names))\nelse:\n  print('internal files sample:', sorted(os.listdir(d))[:30] if os.path.isdir(d) else [])"
 
     - name: Smoke test (imports)
       run: |
