@@ -6,15 +6,88 @@ import subprocess
 import locale
 from datetime import datetime
 
-import pandas as pd
-from reportlab.platypus import SimpleDocTemplate, Table, Paragraph, Spacer
-from reportlab.platypus import TableStyle
-from reportlab.lib.pagesizes import A4, landscape
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.lib.enums import TA_CENTER
+def _pyinstaller_bundle_dir():
+    """
+    Devuelve la carpeta donde deberían vivir los módulos empaquetados por PyInstaller.
+    - Onedir (PyInstaller >= 6): suele ser `<carpeta_del_exe>/_internal`
+    - Onefile: suele ser `sys._MEIPASS` (carpeta temporal)
+    """
+    if not getattr(sys, "frozen", False):
+        return None
 
-import utils.run_console_utils as console_utils, utils.email_utils as email_utils, utils.main_utils as main_utils
-import style.style as estilos
+    exe_dir = os.path.dirname(sys.executable)
+    internal_dir = os.path.join(exe_dir, "_internal")
+    if os.path.isdir(internal_dir):
+        return internal_dir
+
+    meipass = getattr(sys, "_MEIPASS", None)
+    if meipass and os.path.isdir(meipass):
+        return meipass
+
+    return exe_dir
+
+
+def _fatal_bundle_error(msg: str, exit_code: int = 1) -> None:
+    print(msg)
+    print()
+    print("Tip: si lo abriste con doble click y la ventana se cierra, ejecutalo desde CMD/PowerShell para ver el mensaje.")
+    raise SystemExit(exit_code)
+
+
+def _check_bundle_layout_or_explain() -> None:
+    """
+    Si estamos en un EXE de PyInstaller, valida que el bundle tenga pinta de estar completo.
+    Esto evita caer en un traceback críptico del estilo `No module named pandas` cuando:
+    - Se ejecuta el EXE desde adentro de un ZIP (sin extraer todo)
+    - Se copió solo `main.exe` y no la carpeta `_internal`
+    - Un antivirus borró/aisló parte del bundle
+    """
+    if not getattr(sys, "frozen", False):
+        return
+
+    bundle_dir = _pyinstaller_bundle_dir()
+    if not bundle_dir or not os.path.isdir(bundle_dir):
+        return
+
+    pandas_dir = os.path.join(bundle_dir, "pandas")
+    if os.path.isdir(pandas_dir):
+        return
+
+    _fatal_bundle_error(
+        "No se encontró el paquete `pandas` dentro del bundle del EXE.\n"
+        "\n"
+        "Esto casi siempre pasa por una de estas razones:\n"
+        "1) Ejecutaste el EXE directamente desde un ZIP (sin 'Extraer todo').\n"
+        "2) Moviste/copiaste solo `main.exe` y no la carpeta `_internal`.\n"
+        "3) Antivirus/Defender aisló/borró archivos dentro de `_internal`.\n"
+        "\n"
+        "Qué hacer:\n"
+        "- Extraé el ZIP completo a una carpeta (ej: Escritorio) y ejecutá `main.exe` desde ahí.\n"
+        "- Verificá que exista `_internal/pandas/` al lado de `main.exe`.\n"
+        "- Si sigue, volvé a descargar el artefacto más nuevo desde GitHub Actions y reintentalo.\n"
+    )
+
+
+def _run_self_test() -> None:
+    """
+    Diagnóstico rápido para CI y para usuarios:
+    `main.exe --self-test`
+    """
+    _check_bundle_layout_or_explain()
+
+    try:
+        import pandas as _pd  # noqa: F401
+        import numpy as _np  # noqa: F401
+        import openpyxl as _openpyxl  # noqa: F401
+        import reportlab as _reportlab  # noqa: F401
+        import googleapiclient as _googleapiclient  # noqa: F401
+        import google_auth_oauthlib as _google_auth_oauthlib  # noqa: F401
+        import google.auth as _google_auth  # noqa: F401
+    except Exception as e:
+        _fatal_bundle_error(f"SELFTEST_FAIL: {type(e).__name__}: {e}")
+
+    print("SELFTEST_OK")
+    raise SystemExit(0)
 
 def resource_path(relative_path):
     try:
@@ -145,6 +218,45 @@ def editar_excel(df):
 # ------------------ Main ------------------
 
 def main():
+    # Flags tempranos (antes de importar dependencias pesadas)
+    if "--self-test" in sys.argv:
+        _run_self_test()
+
+    _check_bundle_layout_or_explain()
+
+    # Imports diferidos: permiten dar un error más útil cuando el bundle está incompleto.
+    global pd
+    global SimpleDocTemplate, Table, Paragraph, Spacer, TableStyle
+    global A4, landscape, getSampleStyleSheet, TA_CENTER
+    global console_utils, email_utils, main_utils, estilos
+
+    try:
+        import pandas as pd
+    except ModuleNotFoundError as e:
+        if getattr(sys, "frozen", False) and str(getattr(e, "name", "")).startswith("pandas"):
+            _check_bundle_layout_or_explain()
+            _fatal_bundle_error(
+                "No se pudo importar `pandas`.\n"
+                "\n"
+                "Si descargaste un ZIP desde GitHub, asegurate de hacer 'Extraer todo' y de que `main.exe`\n"
+                "esté junto a la carpeta `_internal` (y dentro exista `_internal/pandas/`).\n"
+                "\n"
+                "Si eso está OK, es posible que un antivirus haya eliminado archivos del bundle. Probá volver\n"
+                "a extraer el ZIP en otra carpeta y/o agregar una exclusión.\n"
+            )
+        raise
+
+    from reportlab.platypus import SimpleDocTemplate, Table, Paragraph, Spacer
+    from reportlab.platypus import TableStyle
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.lib.styles import getSampleStyleSheet
+    from reportlab.lib.enums import TA_CENTER
+
+    import utils.run_console_utils as console_utils
+    import utils.email_utils as email_utils
+    import utils.main_utils as main_utils
+    import style.style as estilos
+
     main_utils.set_locale()
 
     df = pd.DataFrame({})

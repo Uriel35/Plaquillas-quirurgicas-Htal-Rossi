@@ -6,8 +6,13 @@ Programa de consola para pegar una tabla (copiada desde Excel), limpiar datos, e
 
 1. En GitHub, ir a **Actions** -> workflow **Build Windows EXE**.
 2. Abrir el último run y descargar el artefacto **app-windows**.
-3. Descomprimir. Dentro vas a ver una carpeta `dist/main/`.
+3. Descomprimir (importante: **Extraer todo**, no ejecutar desde adentro del ZIP). Dentro vas a ver una carpeta `dist/main/`.
 4. Ejecutar `dist/main/main.exe`.
+
+Si aparece un error de módulos faltantes (por ejemplo `No module named 'pandas'`):
+- Verificá que `main.exe` esté junto a la carpeta `_internal` y que dentro exista `_internal/pandas/`.
+- Probá volver a descargar el artefacto más nuevo (Actions) y re-extraerlo en otra carpeta.
+- Desde CMD/PowerShell podés correr `dist\\main\\main.exe --self-test` para chequear imports.
 
 Archivos que genera el programa:
 - `plantilla_quirofano.pdf` (en la misma carpeta del EXE si es escribible; si no, en una carpeta `Quirofano_oftalmologia_rossi` dentro del home del usuario).
