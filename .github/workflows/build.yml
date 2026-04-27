@@ -27,8 +27,8 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip --version
-        where python
-        where pip
+        where.exe python
+        where.exe pip
         python -m pip install -r requirements-app.txt
         python -m pip install pyinstaller pyinstaller-hooks-contrib
         python -m pip show pandas
@@ -44,7 +44,7 @@ jobs:
 
     - name: Verify pandas bundled
       run: |
-        python -c "import os, zipfile; d='dist/main/_internal'; p=os.path.join(d,'PYZ-00.pyz'); print('internal dir exists:', os.path.isdir(d)); print('pandas dir exists:', os.path.isdir(os.path.join(d,'pandas'))); print('PYZ path:', p); print('PYZ exists:', os.path.isfile(p));\nif os.path.isfile(p):\n  z=zipfile.ZipFile(p); names=z.namelist();\n  print('pandas in PYZ:', any(n.startswith('pandas/') for n in names))\nelse:\n  print('internal files sample:', sorted(os.listdir(d))[:30] if os.path.isdir(d) else [])"
+        python -c "import os,zipfile; d='dist/main/_internal'; p=os.path.join(d,'PYZ-00.pyz'); print('internal dir exists:', os.path.isdir(d)); print('pandas dir exists:', os.path.isdir(os.path.join(d,'pandas'))); print('PYZ path:', p); print('PYZ exists:', os.path.isfile(p)); print('internal files sample:', (sorted(os.listdir(d))[:30] if os.path.isdir(d) else [])); print('pandas in PYZ:', (os.path.isfile(p) and any(n.startswith('pandas/') for n in zipfile.ZipFile(p).namelist())))"
 
     - name: Smoke test (imports)
       run: |
